@@ -1,0 +1,52 @@
+import json
+import boto3
+from datetime import datetime
+from decimal import Decimal
+from boto3.dynamodb.conditions import Key, Attr
+
+def lambda_handler(event, context):
+    client = boto3.resource('dynamodb')
+    table = client.Table('ProcessedData')
+    
+    timestamp = datetime.now().strftime("%d%m%Y.%H%M")
+    timestamp = str(timestamp)
+    dia = timestamp[0:2]
+    mes = timestamp[2:4]
+    ano = timestamp[4:8]
+    hora = timestamp[9:11]
+    minutos = timestamp[11:]
+    
+
+    response=table.query(KeyConditionExpression= Key('ID').eq(0) & Key('Timestamp').gt(0), ScanIndexForward=False, Limit=1)
+    
+    horario = str(response['Items'][0]['Timestamp'])
+    dia_aquisicao = horario[0:2]
+    mes_aquisicao = horario[2:4]
+    ano_aquisicao = horario[4:8]
+    hora_aquisicao = horario[9:11]
+    minutos_aquisicao = horario[11:]
+
+    response_string = "\n\n\n\n\n\n\n\n\n\n\n" + "                                                                                    ESTAÇÃO METEOROLÓGICA" + "\n                                                            * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\n                                                            * Horário atual: " + str(dia) + "/" + str(mes) + "/" + str(ano) + " " + str(hora) + ":" + str(minutos) + "                                     *" + \
+        "\n                                                            *                                                                     *" + \
+        "\n                                                            * ÚLTIMOS DADOS ADQUIRIDOS:                                           *" + \
+        "\n                                                            *                                                                     *" + \
+        "\n                                                            * Horário da aquisição dos últimos dados adquiridos: " + str(dia_aquisicao) + "/" + str(mes_aquisicao) + "/" + str(ano_aquisicao) + " " + str(hora_aquisicao) + ":" + str(minutos_aquisicao) + " *"+ \
+        "\n                                                            *                                                                     *" + \
+        "\n                                                            * METEOROLOGIA:                                                       *" + \
+        "\n                                                            * Temperatura: " + str(response['Items'][0]['TempMed']) + " ºC                                                  *" + \
+        "\n                                                            * Humidade: " + str(response['Items'][0]['HumidityMed']) + " RH                                                   *" + \
+        "\n                                                            *                                                                     *" + \
+        "\n                                                            * DADOS ATMOSFÉRICOS:                                                 *" + \
+        "\n                                                            * Temperatura atmosférica: " + str(response['Items'][0]['AtmTempMed']) + " ºC" + "                                   *" + \
+        "\n                                                            * Pressão atmosférica: " + str(response['Items'][0]['AtmPressureMed']) + " hPa" + "                                    *" + \
+        "\n                                                            *                                                                     *" + \
+        "\n                                                            * PERCENTAGEM DE GÁS NO AR:                                           *" + \
+        "\n                                                            * Monóxido de Carbono: " + str(response['Items'][0]['CarbonMonoxideMed']) + " %                                          *" + \
+        "\n                                                            *                                                                     *" + \
+        "\n                                                            * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+    
+    return {
+        'statusCode': 200,
+        'body': response_string
+    }
+  

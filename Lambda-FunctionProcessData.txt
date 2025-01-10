@@ -1,0 +1,63 @@
+import json
+import boto3
+from datetime import datetime
+from decimal import Decimal
+from boto3.dynamodb.conditions import Key, Attr
+
+
+def lambda_handler(event, context):
+    client = boto3.resource('dynamodb')
+    table = client.Table('SensorData')
+    
+    timestamp = datetime.now().strftime("%d%m%Y.%H%M")
+    timestamp = Decimal(timestamp)
+    aux = timestamp-Decimal(0.0002)     # Últimos 2 minutos
+ 
+    response = table.query(
+        KeyConditionExpression=Key('ID').eq(0) & Key('Timestamp').between(aux, timestamp), ScanIndexForward=False, Limit=10
+    )
+    
+    sumTemp = 0
+    sumHumidity = 0
+    sumCM = 0
+    sumAtmTemp = 0
+    sumAtmPress = 0
+
+    for i in range (0, len(response['Items'])):
+       sumTemp = sumTemp + Decimal(response['Items'][i]['Temp'])
+       sumHumidity = sumHumidity + Decimal(response['Items'][i]['Humidity'])
+       sumCM = sumCM + Decimal(response['Items'][i]['CarbonMonoxide'])
+       sumAtmTemp = sumAtmTemp + Decimal(response['Items'][i]['AtmTemp'])
+       sumAtmPress = sumAtmPress + Decimal(response['Items'][i]['AtmPressure'])
+
+    sumTemp = sumTemp/len(response['Items'])
+    sumHumidity= sumHumidity/len(response['Items'])
+    sumCM = sumCM/len(response['Items'])
+    sumAtmTemp = sumAtmTemp/len(response['Items'])
+    sumAtmPress = sumAtmPress/len(response['Items'])
+    
+    try:
+        print("Insert New Event in DynamoDB")
+        table = client.Table('ProcessedData')
+        table.put_item(
+        Item={
+            'ID': int(0),
+            'Timestamp': Decimal(timestamp),
+            'TempMed': round(sumTemp,2),
+            'HumidityMed': round(sumHumidity,2),
+            'CarbonMonoxideMed': round(sumCM,2),
+            'AtmTempMed': round(sumAtmTemp,2),
+            'AtmPressureMed': round(sumAtmPress,2)
+            }
+        )
+        print("Success")
+
+    
+    except Exception as e:
+        print('Error: ', e)
+        raise e   
+    
+    
+
+    return response['Items']
+    #return None

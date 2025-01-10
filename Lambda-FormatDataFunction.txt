@@ -1,0 +1,41 @@
+import json
+import boto3
+from datetime import datetime
+from decimal import Decimal
+from random import randint
+
+def lambda_handler(event, context):
+    client = boto3.resource('dynamodb')
+    table = client.Table('SensorData')
+    ddb_event = json.loads(json.dumps(event), parse_float=Decimal)
+
+    timestamp = datetime.now().strftime("%d%m%Y.%H%M%S")
+    
+    carbon = randint(0, 2)    # Normal é entre 0.20%(0%) e 0.67%(1)
+    #atm_temp = randint(10, 35)
+    #atm_press = randint(92, 110)    # Normal é entre 97 e 105
+    
+    try:
+        print("Insert New Event in DynamoDB")
+        table.put_item(
+        Item={
+            'myName': str(ddb_event ['myName']),
+            'ID':  int(ddb_event ['ID']),
+            'Timestamp': Decimal(timestamp),
+            'Temp': Decimal(ddb_event ['Temp']),
+            'Humidity': Decimal(ddb_event ['Humidity']),
+            'CarbonMonoxide': Decimal(carbon),
+            'AtmTemp': Decimal(ddb_event ['AtmTemp']),
+            'AtmPressure': Decimal(ddb_event ['AtmPressure'])
+            }
+        )
+        print("Success")
+        
+    except Exception as e:
+        print('Error: ', e)
+        raise e
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Hello from Lambda!')
+    }

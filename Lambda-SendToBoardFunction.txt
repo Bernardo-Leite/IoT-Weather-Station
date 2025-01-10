@@ -1,0 +1,63 @@
+import json
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+from decimal import Decimal
+
+
+def lambda_handler(event, context):
+    client = boto3.resource('dynamodb')
+    table = client.Table('ProcessedData')
+    
+    pub = boto3.client('iot-data', region_name='eu-west-1')
+    
+    
+    # Pegar na linha mais recente da tabela 'ProcessedData' com os últimos dados adquiridos
+    resp = table.query(KeyConditionExpression= Key('ID').eq(0) & Key('Timestamp').gt(0), ScanIndexForward=False, Limit=1)
+    
+    #while 'LastEvaluatedKey' in response:
+        #response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+        #data.extend(response['Items'])
+ 
+ 
+    #for i in range ( 0, len(response['Items']) ):
+    
+    # Verificar se algum dos ultimos dados adquiridos ultrapassa os valores normais (thresholds) 
+    if resp['Items'][0]['TempMed'] > 35:
+        response = pub.publish(
+            topic = 'cloud/action',
+            qos = 1,
+            payload = json.dumps({"ALERTA":"Temperatura elevada"})
+        )
+        
+    if resp['Items'][0]['HumidityMed'] > 70:
+        response = pub.publish(
+            topic = 'cloud/action',
+            qos = 1,
+            payload = json.dumps({"ALERTA":"Humidade elevada"})
+        )
+        
+    if resp['Items'][0]['AtmTempMed'] > 30:
+        response = pub.publish(
+            topic = 'cloud/action',
+            qos = 1,
+            payload = json.dumps({"ALERTA":"Temperatura atmosferica elevada"})
+        )    
+        
+    if resp['Items'][0]['AtmPressureMed'] > 1010:
+        response = pub.publish(
+            topic = 'cloud/action',
+            qos = 1,
+            payload = json.dumps({"ALERTA":"Pressao atmosferica elevada"})
+        )   
+        
+    if resp['Items'][0]['CarbonMonoxideMed'] > 1:
+        response = pub.publish(
+            topic = 'cloud/action',
+            qos = 1,
+            payload = json.dumps({"ALERTA":"Niveis de monoxido de carbono no ar elevados"})
+        )    
+        
+        
+    return resp['Items']            
+            
+    #return None
